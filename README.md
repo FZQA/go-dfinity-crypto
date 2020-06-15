@@ -25,3 +25,6 @@ Feel free to join in. All welcome. Open an [issue](https://github.com/dfinity/go
 ## License
 
 GPLv3
+
+//////////////////////////////////////////////////////////////////////
+a BLS threshold signature scheme   环境配置参考yml文件
