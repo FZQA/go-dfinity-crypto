@@ -2,6 +2,9 @@ package bls
 
 import "testing"
 import "strconv"
+import "fmt"
+import "time"
+// import "unsafe"
 
 var unitN = 0
 
@@ -101,7 +104,6 @@ func testRecoverSecretKey(t *testing.T) {
 
 	// make master secret key
 	msk := sec.GetMasterSecretKey(k)
-
 	n := k
 	secVec := make([]SecretKey, n)
 	idVec := make([]ID, n)
@@ -128,8 +130,9 @@ func testRecoverSecretKey(t *testing.T) {
 }
 
 func testEachSign(t *testing.T, m string, msk []SecretKey, mpk []PublicKey) ([]ID, []SecretKey, []PublicKey, []Sign) {
+	//msk  mpk大小为3
 	idTbl := []byte{3, 5, 193, 22, 15}
-	n := len(idTbl)
+	n := len(idTbl) //n=5
 
 	secVec := make([]SecretKey, n)
 	pubVec := make([]PublicKey, n)
@@ -143,7 +146,7 @@ func testEachSign(t *testing.T, m string, msk []SecretKey, mpk []PublicKey) ([]I
 		}
 		t.Logf("idVec[%d]=%s\n", i, idVec[i].GetHexString())
 
-		err = secVec[i].Set(msk, &idVec[i])
+		err = secVec[i].Set(msk, &idVec[i]) //通过3阶多项式 计算出secVec  大小为5
 		if err != nil {
 			t.Error(err)
 		}
@@ -158,7 +161,7 @@ func testEachSign(t *testing.T, m string, msk []SecretKey, mpk []PublicKey) ([]I
 			t.Errorf("Pubkey derivation does not match\n%s\n%s", pubVec[i].GetHexString(), secVec[i].GetPublicKey().GetHexString())
 		}
 
-		signVec[i] = *secVec[i].Sign(m)
+		signVec[i] = *secVec[i].Sign(m) //单独签名
 		if !signVec[i].Verify(&pubVec[i], m) {
 			t.Error("Pubkey derivation does not match")
 		}
@@ -168,19 +171,31 @@ func testEachSign(t *testing.T, m string, msk []SecretKey, mpk []PublicKey) ([]I
 func testSign(t *testing.T) {
 	m := "testSign"
 	t.Log(m)
-
+	//0代表非门限
 	var sec0 SecretKey
-	sec0.SetByCSPRNG()
-	pub0 := sec0.GetPublicKey()
-	s0 := sec0.Sign(m)
-	if !s0.Verify(pub0, m) {
+	sec0.SetByCSPRNG() //获取一个秘密值设为sk
+	pub0 := sec0.GetPublicKey() //通过sk获取pk    数量为1
+	fmt.Println("--------------------------------")
+	fmt.Println("len pk", len(pub0.Serialize())) //Serialize转换为byte测大小
+	fmt.Println("--------------------------------")
+	s0 := sec0.Sign(m) //直接通过sk前面
+	fmt.Println("--------------------------------")
+	fmt.Println("len sig", len(s0.Serialize())) //Serialize转换为byte测大小
+	fmt.Println("--------------------------------")
+	
+	start := time.Now()
+	if !s0.Verify(pub0, m) { //验证签名
 		t.Error("Signature does not verify")
 	}
+	end := time.Now()
+	fmt.Println("--------------------------------")
+	fmt.Println("time for Verify", end.Sub(start))
+	fmt.Println("--------------------------------")
 
 	k := 3
-	msk := sec0.GetMasterSecretKey(k)
-	mpk := GetMasterPublicKey(msk)
-	idVec, secVec, pubVec, signVec := testEachSign(t, m, msk, mpk)
+	msk := sec0.GetMasterSecretKey(k) //将sk   k阶多项式
+	mpk := GetMasterPublicKey(msk) //通过ski计算出pki
+	idVec, secVec, pubVec, signVec := testEachSign(t, m, msk, mpk)  //单签名
 
 	var sec1 SecretKey
 	err := sec1.Recover(secVec, idVec)
@@ -191,15 +206,15 @@ func testSign(t *testing.T) {
 		t.Error("Mismatch in recovered seckey.")
 	}
 	var pub1 PublicKey
-	err = pub1.Recover(pubVec, idVec)
+	err = pub1.Recover(pubVec, idVec) //由pk分享还原出pk
 	if err != nil {
 		t.Error(err)
 	}
-	if !pub0.IsEqual(&pub1) {
+	if !pub0.IsEqual(&pub1) { //理论上pub0等于pub1
 		t.Error("Mismatch in recovered pubkey.")
 	}
 	var s1 Sign
-	err = s1.Recover(signVec, idVec)
+	err = s1.Recover(signVec, idVec) //通过多个签名恢复完整签名
 	if err != nil {
 		t.Error(err)
 	}

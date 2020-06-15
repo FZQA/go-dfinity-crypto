@@ -132,7 +132,7 @@ func (sec *SecretKey) GetMasterSecretKey(k int) (msk []SecretKey) {
 	return msk
 }
 
-// GetMasterPublicKey --
+// GetMasterPublicKey --   通过n个sk计算n个pk
 func GetMasterPublicKey(msk []SecretKey) (mpk []PublicKey) {
 	n := len(msk)
 	mpk = make([]PublicKey, n)
